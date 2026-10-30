@@ -49,6 +49,7 @@
                     <label class="sr-only" for="loginPassword">Password</label>
                     <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
                     <button class="primary-btn" onclick="login()">Login</button>
+
                     <div class="switch-auth">
                         Don't have an account?
                         <button class="text-btn" type="button" onclick="showRegister()">Create Account</button>
@@ -69,7 +70,6 @@
                         <button class="text-btn" type="button" onclick="showLogin()">Login</button>
                     </div>
                 </div>
-                <p class="auth-note">Demo login: <strong>siddhant</strong> / <strong>1234</strong>. Run <code>npm start</code> and open <code>http://127.0.0.1:3000</code>; opening this file directly will not connect to SQLite. Demo only—don't use a real password.</p>
             </div>
         </div>
     </section>
@@ -81,11 +81,14 @@
 
                 <div class="search-box">
                     <label class="sr-only" for="searchInput">Search posts, people, or topics</label>
-                    <input type="search" id="searchInput" placeholder="🔍 Search posts, people, or topics"
+                    <input type="search" id="searchInput" placeholder="🔍 Search posts, @people, or #topics"
                         oninput="searchContent()">
                 </div>
 
                 <div class="nav-actions">
+                    <button id="navAdminBtn" class="nav-admin-btn" type="button" onclick="showAdminPage()" style="display:none;" title="Open Admin Dashboard">
+                        🛡️ Admin
+                    </button>
                     <button class="icon-btn" type="button" onclick="toggleDarkMode()" title="Toggle dark mode" aria-label="Toggle dark mode" aria-pressed="false">🌙</button>
                     <button class="icon-btn notification-button" type="button" onclick="showNotifications()" title="Notifications" aria-label="Show notifications">
                         🔔<span class="notification-badge" id="notificationBadge" aria-hidden="true" hidden></span>
@@ -104,6 +107,8 @@
                     <button class="side-item active" type="button" data-page="home" aria-current="page" onclick="showHome()">🏠 Home</button>
                     <button class="side-item" type="button" data-page="profile" onclick="showProfile()">👤 Profile</button>
                     <button class="side-item" type="button" data-page="notifications" onclick="showNotifications()">🔔 Notifications</button>
+                    <button class="side-item" type="button" data-page="saved" onclick="showSavedPage()">🔖 Saved Posts</button>
+                    <button class="side-item admin-side-btn" id="sideAdminBtn" type="button" data-page="admin" onclick="showAdminPage()" style="display:none;">🛡️ Admin Panel</button>
                     <button class="side-item" type="button" onclick="focusCreatePost()">➕ Create Post</button>
                     <button class="side-item" type="button" onclick="logout()">🚪 Logout</button>
                 </nav>
@@ -126,22 +131,23 @@
             </aside>
 
             <main class="main-feed">
+                <!-- HOME PAGE -->
                 <section id="homePage">
                     <div class="story-strip">
-                        <div class="story-card active">
+                        <div class="story-card active" onclick="filterByStory('all', this)">
                             <div class="story-avatar">S</div>
                             <span>Stories</span>
                         </div>
-                        <div class="story-card">
-                            <div class="story-avatar alt">P</div>
-                            <span>Photo</span>
+                        <div class="story-card" onclick="filterByStory('photo', this)">
+                            <div class="story-avatar alt">📸</div>
+                            <span>Photos</span>
                         </div>
-                        <div class="story-card">
-                            <div class="story-avatar alt-two">T</div>
+                        <div class="story-card" onclick="filterByStory('tech', this)">
+                            <div class="story-avatar alt-two">💻</div>
                             <span>Tech</span>
                         </div>
-                        <div class="story-card">
-                            <div class="story-avatar alt-three">C</div>
+                        <div class="story-card" onclick="filterByStory('campus', this)">
+                            <div class="story-avatar alt-three">🎓</div>
                             <span>Campus</span>
                         </div>
                     </div>
@@ -171,9 +177,36 @@
                             <label class="sr-only" for="postText">Write a post</label>
                             <textarea id="postText" placeholder="What's happening on SiddVerse?"></textarea>
                         </div>
+
+                        <!-- Local Image Preview -->
+                        <div id="createImagePreviewWrap" class="image-preview-wrap" style="display:none;">
+                            <img id="createImagePreview" src="" alt="Selected post image">
+                            <button type="button" class="preview-remove-btn" onclick="clearCreateImage()" title="Remove image">&times;</button>
+                        </div>
+
+                        <!-- Poll Creator Card -->
+                        <div id="pollCreatorCard" class="poll-creator-card" style="display:none;">
+                            <div class="poll-creator-header">
+                                <span>📊 <strong>Create a Community Poll</strong></span>
+                                <button type="button" class="close-poll-btn" onclick="togglePollCreator(false)" title="Remove poll">&times;</button>
+                            </div>
+                            <input type="text" id="pollQuestionInput" placeholder="Ask a question (e.g. What should we build next?)" class="poll-input">
+                            <div class="poll-options-grid">
+                                <input type="text" id="pollOpt1" placeholder="Option 1" class="poll-input">
+                                <input type="text" id="pollOpt2" placeholder="Option 2" class="poll-input">
+                                <input type="text" id="pollOpt3" placeholder="Option 3 (optional)" class="poll-input">
+                                <input type="text" id="pollOpt4" placeholder="Option 4 (optional)" class="poll-input">
+                            </div>
+                        </div>
+
                         <div class="create-bottom">
+                            <div class="create-tools">
+                                <input type="file" id="postFileInput" accept="image/*" style="display:none;" onchange="handlePostFileSelect(event)">
+                                <button type="button" class="tool-btn" onclick="document.getElementById('postFileInput').click()" title="Upload image from computer">📷 Photo</button>
+                                <button type="button" class="tool-btn" id="togglePollBtn" onclick="togglePollCreator()" title="Attach a poll">📊 Poll</button>
+                            </div>
                             <label class="sr-only" for="imageURL">Optional image URL</label>
-                            <input class="image-url" id="imageURL" type="url" placeholder="Optional image URL">
+                            <input class="image-url" id="imageURL" type="url" placeholder="Or paste image URL...">
                             <button class="post-btn" onclick="createPost()">🚀 Post</button>
                         </div>
                     </div>
@@ -188,13 +221,22 @@
                     <div id="feed" aria-live="polite"></div>
                 </section>
 
-                <section class="profile-page" id="profilePage">
+                <!-- PROFILE PAGE -->
+                <section class="profile-page" id="profilePage" style="display:none;">
+                    <div class="profile-nav-bar">
+                        <button class="back-link-btn" id="profileBackBtn" type="button" onclick="showHome()">← Back to Feed</button>
+                    </div>
                     <div class="profile-card">
                         <div class="cover" id="profileCover"></div>
                         <div class="profile-info">
                             <div class="profile-avatar" id="profileAvatar">D</div>
-                            <h2 id="profileName">Darshan</h2>
-                            <p id="profileUsername">@username</p>
+                            <div class="profile-heading-row">
+                                <div>
+                                    <h2 id="profileName">User Name</h2>
+                                    <p id="profileUsername">@username</p>
+                                </div>
+                                <span class="profile-badge-admin" id="profileAdminBadge" style="display:none;">🛡️ Admin</span>
+                            </div>
                             <p id="profileBio" style="margin-top:10px;">Welcome to my SiddVerse profile!</p>
 
                             <div class="profile-stats">
@@ -212,14 +254,21 @@
                                 </div>
                             </div>
 
-                            <button class="edit-btn" onclick="openEditProfile()">✏️ Edit Profile</button>
+                            <div class="profile-actions-bar">
+                                <button class="edit-btn" id="profileEditBtn" onclick="openEditProfile()">✏️ Edit Profile</button>
+                                <button class="follow-btn profile-follow-btn" id="profileFollowBtn" style="display:none;" onclick="toggleFollowProfileUser()">Follow</button>
+                            </div>
                         </div>
                     </div>
 
+                    <div class="profile-posts-header">
+                        <h3 id="profilePostsHeading">Posts</h3>
+                    </div>
                     <div id="profilePosts"></div>
                 </section>
 
-                <section class="notifications-page" id="notificationsPage" aria-labelledby="notificationsHeading">
+                <!-- NOTIFICATIONS PAGE -->
+                <section class="notifications-page" id="notificationsPage" aria-labelledby="notificationsHeading" style="display:none;">
                     <div class="notifications-header">
                         <div>
                             <h2 id="notificationsHeading">Notifications</h2>
@@ -228,6 +277,212 @@
                         <button class="mark-read-btn" type="button" onclick="markAllNotificationsRead()">Mark all as read</button>
                     </div>
                     <div id="notificationList" aria-live="polite"></div>
+                </section>
+
+                <!-- ADMIN DASHBOARD PAGE -->
+                <section class="admin-page" id="adminPage" style="display:none;">
+                    <div class="admin-header">
+                        <div>
+                            <div class="admin-badge-pill">🛡️ SYSTEM ADMINISTRATOR</div>
+                            <h2>Admin Dashboard</h2>
+                            <p>Monitor platform statistics, manage users, and moderate community content.</p>
+                        </div>
+                        <div class="admin-header-actions">
+                            <button class="admin-btn secondary" type="button" onclick="loadAdminData(true)">🔄 Refresh</button>
+                            <button class="admin-btn secondary" type="button" onclick="exportUsersCSV()" title="Export Users to CSV">📥 Users CSV</button>
+                            <button class="admin-btn secondary" type="button" onclick="exportPostsCSV()" title="Export Posts to CSV">📥 Posts CSV</button>
+                            <button class="admin-btn primary" type="button" onclick="switchAdminTab('broadcast')">📢 Broadcast</button>
+                        </div>
+                    </div>
+
+                    <!-- Platform Metrics Grid -->
+                    <div class="admin-metrics-grid">
+                        <div class="admin-metric-card">
+                            <div class="metric-icon">👥</div>
+                            <div class="metric-info">
+                                <span class="metric-title">Total Users</span>
+                                <strong class="metric-value" id="adminStatUsers">0</strong>
+                                <span class="metric-sub" id="adminStatAdmins">0 Admins</span>
+                            </div>
+                        </div>
+                        <div class="admin-metric-card">
+                            <div class="metric-icon">📝</div>
+                            <div class="metric-info">
+                                <span class="metric-title">Total Posts</span>
+                                <strong class="metric-value" id="adminStatPosts">0</strong>
+                                <span class="metric-sub" id="adminStatPostImages">0 with images</span>
+                            </div>
+                        </div>
+                        <div class="admin-metric-card">
+                            <div class="metric-icon">💬</div>
+                            <div class="metric-info">
+                                <span class="metric-title">Comments</span>
+                                <strong class="metric-value" id="adminStatComments">0</strong>
+                                <span class="metric-sub">Across all posts</span>
+                            </div>
+                        </div>
+                        <div class="admin-metric-card">
+                            <div class="metric-icon">❤️</div>
+                            <div class="metric-info">
+                                <span class="metric-title">Likes & Follows</span>
+                                <strong class="metric-value" id="adminStatLikes">0</strong>
+                                <span class="metric-sub" id="adminStatFollows">0 connections</span>
+                            </div>
+                        </div>
+                        <div class="admin-metric-card system-card">
+                            <div class="metric-icon">⚡</div>
+                            <div class="metric-info">
+                                <span class="metric-title">System Status</span>
+                                <strong class="metric-value status-online">Online</strong>
+                                <span class="metric-sub" id="adminStatSystem">SQLite WAL</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Navigation Tabs -->
+                    <div class="admin-tabs">
+                        <button class="admin-tab-btn active" type="button" data-admintab="users" onclick="switchAdminTab('users')">
+                            👥 Users (<span id="adminTabUsersCount">0</span>)
+                        </button>
+                        <button class="admin-tab-btn" type="button" data-admintab="posts" onclick="switchAdminTab('posts')">
+                            📝 Posts Moderation (<span id="adminTabPostsCount">0</span>)
+                        </button>
+                        <button class="admin-tab-btn" type="button" data-admintab="comments" onclick="switchAdminTab('comments')">
+                            💬 Comments (<span id="adminTabCommentsCount">0</span>)
+                        </button>
+                        <button class="admin-tab-btn" type="button" data-admintab="logs" onclick="switchAdminTab('logs')">
+                            📜 Audit Logs (<span id="adminTabLogsCount">0</span>)
+                        </button>
+                        <button class="admin-tab-btn" type="button" data-admintab="broadcast" onclick="switchAdminTab('broadcast')">
+                            📢 Broadcast
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: USERS MANAGEMENT -->
+                    <div class="admin-tab-panel" id="adminTabPanelUsers">
+                        <div class="admin-panel-toolbar">
+                            <div class="admin-search-wrap">
+                                <input type="text" id="adminUserSearch" placeholder="🔍 Search users by name or @username..." oninput="filterAdminUsers()">
+                            </div>
+                        </div>
+                        <div class="admin-table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Stats</th>
+                                        <th>Bio</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminUsersTableBody">
+                                    <tr><td colspan="6" class="table-loading">Loading users...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: POSTS MODERATION -->
+                    <div class="admin-tab-panel" id="adminTabPanelPosts" style="display:none;">
+                        <div class="admin-panel-toolbar">
+                            <div class="admin-search-wrap">
+                                <input type="text" id="adminPostSearch" placeholder="🔍 Search posts by author or content..." oninput="filterAdminPosts()">
+                            </div>
+                        </div>
+                        <div class="admin-table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Author</th>
+                                        <th>Content</th>
+                                        <th>Media</th>
+                                        <th>Engagement</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminPostsTableBody">
+                                    <tr><td colspan="7" class="table-loading">Loading posts...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: COMMENTS MODERATION -->
+                    <div class="admin-tab-panel" id="adminTabPanelComments" style="display:none;">
+                        <div class="admin-panel-toolbar">
+                            <p class="admin-panel-hint">Recent comments across all platform discussions.</p>
+                        </div>
+                        <div class="admin-table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Author</th>
+                                        <th>Comment</th>
+                                        <th>Post ID</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminCommentsTableBody">
+                                    <tr><td colspan="6" class="table-loading">Loading comments...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: BROADCAST ANNOUNCEMENT -->
+                    <div class="admin-tab-panel" id="adminTabPanelBroadcast" style="display:none;">
+                        <div class="broadcast-card">
+                            <h3>📢 Send Community Announcement</h3>
+                            <p class="broadcast-desc">
+                                Broadcast an official system notification to all registered users on SiddVerse.
+                                Optionally publish it as an official post in the community feed.
+                            </p>
+                            <div class="broadcast-form">
+                                <label for="broadcastMessage">Announcement Message:</label>
+                                <textarea id="broadcastMessage" rows="4" placeholder="Type your announcement to all community members..."></textarea>
+                                
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="broadcastAsPost" checked>
+                                    <span>Also publish as an official post in the community feed</span>
+                                </label>
+
+                                <button class="primary-btn broadcast-submit-btn" type="button" onclick="adminSendBroadcast()">
+                                    🚀 Send Announcement to Everyone
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 5: AUDIT LOGS -->
+                    <div class="admin-tab-panel" id="adminTabPanelLogs" style="display:none;">
+                        <div class="admin-panel-toolbar">
+                            <div class="admin-search-wrap">
+                                <input type="text" id="adminLogSearch" placeholder="🔍 Search audit logs by admin, action, or target..." oninput="filterAdminLogs()">
+                            </div>
+                        </div>
+                        <div class="admin-table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Time</th>
+                                        <th>Admin</th>
+                                        <th>Action</th>
+                                        <th>Target</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminLogsTableBody">
+                                    <tr><td colspan="5" class="table-loading">Loading audit logs...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </section>
             </main>
 
@@ -241,30 +496,80 @@
                     <h3>👥 People you may know</h3>
                     <div id="suggestions"></div>
                 </div>
-
-                <div class="right-card">
-                    <h3>✨ Daily insight</h3>
-                    <p class="insight-text">Share a post and follow people to start building your network.</p>
-                </div>
             </aside>
         </div>
     </div>
 
+    <!-- Edit Profile Modal -->
     <div class="modal" id="editModal">
         <div class="modal-box">
-            <h2>Edit Profile</h2>
-            <label class="sr-only" for="editName">Your name</label>
+            <h2>✏️ Edit Profile</h2>
+            <label class="modal-label" for="editName">Full Name</label>
             <input type="text" id="editName" placeholder="Your name">
-            <label class="sr-only" for="editBio">Your bio</label>
+            
+            <label class="modal-label" for="editBio">Bio</label>
             <input type="text" id="editBio" placeholder="Your bio">
-            <label class="sr-only" for="editAvatar">Avatar image URL</label>
-            <input type="url" id="editAvatar" placeholder="Avatar image URL">
-            <label class="sr-only" for="editCover">Cover background URL</label>
-            <input type="url" id="editCover" placeholder="Cover background URL">
+            
+            <label class="modal-label" for="editAvatar">Avatar Photo</label>
+            <div class="file-input-row">
+                <input type="url" id="editAvatar" placeholder="Avatar URL or choose local file...">
+                <input type="file" id="editAvatarFile" accept="image/*" style="display:none;" onchange="handleProfileFileSelect(event, 'editAvatar')">
+                <button type="button" class="tool-btn" onclick="document.getElementById('editAvatarFile').click()">Browse</button>
+            </div>
+
+            <label class="modal-label" for="editCover">Cover Banner Photo</label>
+            <div class="file-input-row">
+                <input type="url" id="editCover" placeholder="Cover URL or choose local file...">
+                <input type="file" id="editCoverFile" accept="image/*" style="display:none;" onchange="handleProfileFileSelect(event, 'editCover')">
+                <button type="button" class="tool-btn" onclick="document.getElementById('editCoverFile').click()">Browse</button>
+            </div>
 
             <div class="modal-actions">
                 <button class="cancel-btn" onclick="closeEditProfile()">Cancel</button>
-                <button class="post-btn" onclick="saveProfile()">Save</button>
+                <button class="post-btn" onclick="saveProfile()">Save Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Post Modal -->
+    <div class="modal" id="editPostModal">
+        <div class="modal-box">
+            <h2>✏️ Edit Post</h2>
+            <input type="hidden" id="editPostId">
+            <label class="modal-label" for="editPostText">Post Text</label>
+            <textarea id="editPostText" rows="4" placeholder="Edit your post..."></textarea>
+
+            <label class="modal-label" for="editPostImage">Attached Image</label>
+            <div class="file-input-row">
+                <input type="url" id="editPostImage" placeholder="Image URL or choose local file...">
+                <input type="file" id="editPostFileInput" accept="image/*" style="display:none;" onchange="handleEditPostFileSelect(event)">
+                <button type="button" class="tool-btn" onclick="document.getElementById('editPostFileInput').click()">Browse</button>
+            </div>
+            <div id="editPostPreviewWrap" class="image-preview-wrap" style="display:none; margin-top:10px;">
+                <img id="editPostPreview" src="" alt="Post image preview">
+                <button type="button" class="preview-remove-btn" onclick="clearEditPostPreview()" title="Remove image">&times;</button>
+            </div>
+
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeEditPostModal()">Cancel</button>
+                <button class="post-btn" onclick="saveEditPost()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Reset Password Modal -->
+    <div class="modal" id="adminResetPasswordModal">
+        <div class="modal-box">
+            <h2>🔑 Reset User Password</h2>
+            <p style="margin-bottom:12px; color:#6b7280; font-size:0.9rem;">
+                Resetting password for: <strong id="resetTargetUsername" style="color:#7c3aed;">@user</strong>
+            </p>
+            <label class="sr-only" for="adminNewPasswordInput">New Password</label>
+            <input type="password" id="adminNewPasswordInput" placeholder="Enter new password (min 4 chars)">
+
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeResetPasswordModal()">Cancel</button>
+                <button class="post-btn" onclick="submitResetPassword()">Set New Password</button>
             </div>
         </div>
     </div>
